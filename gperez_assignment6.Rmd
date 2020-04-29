@@ -1,0 +1,358 @@
+---
+title: "gperez_623_Assignment6"
+author: "Gera"
+date: "9/5/2019"
+output: html_document
+---
+
+**This is an exercise in bash and R to evaluate de novo Transcriptome assemblies (Part 2).**
+
+Please work with the following Trinity output found on Talapas here:
+
+Copy or link these files to a working directory on Talapas:
+```{r engine = 'bash', eval = FALSE}
+scp /projects/bgmp/shared/Bi623/assign5/tri_rare.fasta .
+scp /projects/bgmp/shared/Bi623/assign5/tri_rare.timing .
+scp /projects/bgmp/shared/Bi623/assign5/tri_40Xnorm.fasta .
+scp /projects/bgmp/shared/Bi623/assign5/tri_40Xnorm.timing .
+```
+
+
+The files with “rare” in the name are from a Trinity assembly based on the “cleaned, rare-kmer-filtered only” Gulf pipefish reads from Assignment 5. The files with “40Xnorm” are output from a Trinity run based on the cleaned, rare-kmer-filtered, 40X-normalized reads. Look at the information in the .timing files. Do any runtime differences between the rare and 40Xnorm assemblies stand out?
+
+
+*There is some run time difference between the rare-kmer-filtered only and the 40X-normalized. The rare-kmer-filtered takes more time to run than the 40X-normalized except for the Butterfly. The rare-kmer-filtered running more time can explained by having more data being processed than 40X-normalized. Also, the 40X-normalized throws away files. The butterfly did run faster in the rare-kmer-filtered compared to 40X-normalized which is open for discussion.*
+
+2. We don’t have time to run Trinity (hence the files above), but it is actually very easy to run, with limited flexibility in user choice of parameters. Below are the options I used for the above assemblies. Consult the Trinity documentation https://github.com/trinityrnaseq/trinityrnaseq/wiki, and briefly explain the options below.
+
+            
+--seqType: States type of reads, it can be either a fasta or fastq file
+
+--JM: States the amount of memory to allocate for Jellyfish for kmerization
+
+--left: States left paired end read and requires a file name.
+
+-- right: States right paired end read and requires a file name.
+
+--output: States the directory for the ouput file, default will be built in the current directory.
+
+--CPU: States the number of cpus to use, the defualt is 2
+
+--min_contig_length: States the minimum contig length to report
+
+--min_kmer_cov: State the minimum kmer coverage to report, if the coverage is less than the number then it wont report it. It has to be the number it states.
+
+--group_pairs_distance: States multiple paired-end library fragment sizes using the larger insert library.
+
+3. Using information in the two assembly files, calculate the number of transcripts, the maximum transcript length, the minimum transcript length, the mean transcript length, and the median transcript length. To do this you can produce a file for each assembly that contains transcript lengths, then import into R for analysis. Regardless of how you tally the statistics, plot the contig length distributions for each assembly using R hist() and boxplot() functions. Make sure your plots are clean and labeled appropriately.
+
+
+*Using bash, files were created that contain transcript lengths.*
+```{r engine = 'bash', eval = FALSE}
+cat tri_rare.fasta | sed -E 's/(>.+)/\1@/'|  tr -d "\n"|  tr "@" "\n"| tr ">" "\n"| sed -n '1~2p'| awk '{print length}'| grep -v  "^0" > tri_rare.count.txt
+cat tri_40Xnorm.fasta | sed -E 's/(>.+)/\1@/'|  tr -d "\n"|  tr "@" "\n"| tr ">" "\n"| sed -n '1~2p'| awk '{print length}'| grep -v  "^0" > tri_40Xnorm.count.txt
+
+
+
+cat tri_rare.fasta | sed -E 's/(>.+)/\1@/'|  tr -d "\n"|  tr "@" "\n"| tr ">" "\n"| sed -n '1~2p'| awk '{print length}'| grep -v  "^0" > tri_rare.count.txt
+cat tri_40Xnorm.fasta | sed -E 's/(>.+)/\1@/'|  tr -d "\n"|  tr "@" "\n"| tr ">" "\n"| sed -n '1~2p'| awk '{print length}'| grep -v  "^0" > tri_40Xnorm.count.txt
+```
+
+
+
+
+
+```{r setup}
+# sets the directory to save files from this Rscript
+setwd("/Users/gerardoperez/Documents/Bio623/Ex6")
+knitr::opts_knit$set(root.dir = "/Users/gerardoperez/Documents/Bio623/Ex6" )
+```
+
+
+
+```{r}
+# import files with transcript length into R for analysis
+tri_40Xnorm.count.txt <- read.table("tri_40Xnorm.count.txt",  header=F)
+tri_rare.count.txt <- read.table("tri_rare.count.txt", header=F)
+```
+
+
+
+
+```{r}
+
+# Calculates Standard “Intrinsic” Metrics.
+mean(tri_40Xnorm.count.txt[,1])
+
+max(tri_40Xnorm.count.txt[,1])
+
+min(tri_40Xnorm.count.txt[,1])
+
+median(tri_40Xnorm.count.txt[,1])
+
+mean(tri_rare.count.txt[,1])
+
+max(tri_rare.count.txt[,1])
+
+min(tri_rare.count.txt[,1])
+
+median(tri_rare.count.txt[,1])
+
+```
+
+
+```{r}
+
+# Creates two histograms side by side with certain parameters.
+par(mfrow=c(1,2))
+hist(tri_40Xnorm.count.txt[,1], xlab="tri_40Xnorm", xlim=c(0,20000), ylim=c(0,35000), main = "")
+hist(tri_rare.count.txt[,1], xlab="tri_rare", xlim=c(0,20000), ylim=c(0,35000), main = "")
+
+```
+
+```{r}
+
+# Creates two boxplots side by side with certain parameters.
+par(mfrow=c(1,2))
+boxplot(tri_40Xnorm.count.txt[,1], xlab="tri_40Xnorm", ylab="transcript  length", ylim=c(0,25000))
+boxplot(tri_rare.count.txt[,1], xlab="tri_rare", ylab="transcript  length", ylim=c(0,25000))
+
+```
+
+
+Based on your assembly statistics and what you know about transcripts, comment on whether there is a clear difference in quality between the two Trinity assemblies. 
+
+*There is no clear difference*
+
+Also comment on differences in the total number of transcripts and transcript groups (“loci”) for the two assemblies. For this last question, you’ll have to do a bit of work on the transcript header lines with UNIX commands. 
+
+*Using bash, word counts were done for total number of transcripts and transcript groups (“loci”) for the two assemblies.*
+```{r engine = 'bash', eval = FALSE}
+
+grep "comp" tri_40Xnorm.fasta | sed -E 's/>(comp.+_c.+)_.+/\1\t/'| wc -l
+140045
+
+
+grep "comp" tri_40Xnorm.fasta | sed -E 's/>(comp.+_c.+)_.+/\1\t/'|sort -u | wc -l
+31602
+
+
+grep "comp" tri_rare.fasta | sed -E 's/>(comp.+_c.+)_.+/\1\t/'| wc -l
+113729
+
+
+grep "comp" tri_rare.fasta | sed -E 's/>(comp.+_c.+)_.+/\1\t/'|sort -u | wc -l
+33928
+
+
+```
+
+*First of all, there is a difference in total number of transcripts between Tri_40xnorm and the tri_rare. The Tri_40xnorm has more total transcripts than than the Tri_rare. The differences in the total number of transcripts to transcript groups in the Tri_40xnorm was 4 fold difference. Where in tri_rare was 3 fold difference. This shows that there was more of a difference in the Tri_40xnorm. Comparing unique locus, the tri_rare had more transcripts than tri_40Xnorm. The reason is that the normalization leads to less transcripts breaking from bubbles and errors that would cause more coverage.*
+
+
+
+What might transcripts within a “locus” represent? (hint: “compX_cX” prefixes represent distinct transcript bundles (“loci”)).
+
+*They represent Trinity read clusters. The compX_cX represent genes and isomers. These isomers produce redundancy*
+
+
+5. BLAST your pipefish transcripts from each assembly (as separate jobs) against threespine stickleback protein sequences from Ensembl. You should already have a stickleback blast database from Assignment 3
+
+```{r engine = 'bash', eval = FALSE}
+#!/bin/bash
+
+#SBATCH --account=bgmp
+#SBATCH --partition=bgmp
+#SBATCH --job-name=blastx_40x
+#SBATCH --output=slurm-%j-%x.out
+
+#SBATCH --time=0-20:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=8
+
+ml purge ; ml blast/2.2.29+
+/usr/bin/time -v blastx -db /projects/bgmp/gperez8/projects/bgmp/gperez8/Bi623/Ex3/Gasterosteus_aculeatus_db -query tri_40Xnorm.fasta -evalue 1e-5 \
+-max_target_seqs 1 -num_threads 8 -outfmt '6 qseqid qlen sseqid slen pident nident length mismatch qstart qend sstart send evalue bitscore' \
+-out tri_40Xnorm.output_.tsv
+
+
+
+#!/bin/bash
+
+#SBATCH --account=bgmp
+#SBATCH --partition=bgmp
+#SBATCH --job-name=blastx_rare
+#SBATCH --output=slurm-%j-%x.out
+
+#SBATCH --time=0-20:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=8
+
+ml purge ; ml blast/2.2.29+
+/usr/bin/time -v  blastx -db /projects/bgmp/gperez8/projects/bgmp/gperez8/Bi623/Ex3/Gasterosteus_aculeatus_db -query tri_rare.fasta -evalue 1e-5 \
+-max_target_seqs 1 -num_threads 8 -outfmt '6 qseqid qlen sseqid slen pident nident length mismatch qstart qend sstart send evalue bitscore' \
+-out tri_rare.output_.tsv
+```
+
+
+6. For each top stickleback BLAST hit you identify, obtain the gene name (e.g. ENSGACG00000000002, etc.) from the sequence headers in the Ensembl stickleback proteins .fasta file.
+
+*Extracts 2 columns, "protein ID" and "gene ID" from the  blast output file*
+```{r engine = 'bash', eval = FALSE}
+zcat Gasterosteus_aculeatus.BROADS1.pep.all.fa.gz| grep "^>"|awk '{ print $1 "\t"  $4}'| sed 's/>//g'| sort -uk 1,1  > stickleback_2_column_sort.txt
+```
+
+Produce a table of the top BLAST hits you identified for each pipefish transcript, including the trinity transcript ID, stickleback blast hit e-value, stickleback blast hit protein ID, and stickleback hit gene ID
+
+
+*Extracts 3 columns, "locus", "protein ID" and "e-value" from the  blast output file*
+```{r engine = 'bash', eval = FALSE}
+awk '{print $1, $3, $13}'  tri_rare.output_.tsv | sort -uk 2,2 > tri_rare_sort.txt
+
+awk '{print $1, $3, $13}'  tri_40Xnorm.output_.tsv | sort -uk 2,2 > tri_40Xnorm_sort.txt
+```
+
+
+```{r}
+# Opens and reads txt file and stores it to a variable as a dataframe.
+tri_40xnrom_3col.txt <- read.table("tri_40Xnorm_sort.txt",header=F)
+tri_rare_3col_.txt <- read.table("tri_rare_sort.txt",header=F)
+stick_2_col.txt <- read.table("stickleback_2_column_sort.txt",header=F)
+
+```
+
+
+```{r}
+# adds column names to dataframe
+colnames(tri_40xnrom_3col.txt)<- c("locus", "protein ID", "e-value")
+colnames(tri_rare_3col_.txt)<- c("locus", "protein ID", "e-value")
+colnames(stick_2_col.txt)<-c("protein ID", "gene ID")
+
+```
+
+
+```{r}
+#  merges two dataframes by similiar column name and stores the result to a new variable.
+tri_40xnrom_merge<-merge(tri_40xnrom_3col.txt, stick_2_col.txt, by="protein ID" )
+tri_rare_merge<- merge(tri_rare_3col_.txt, stick_2_col.txt,  by="protein ID" )
+
+```
+
+
+```{r}
+# Computes the number of unique genes.
+length(unique(tri_40xnrom_merge$"gene ID"))
+
+length(unique(tri_rare_merge$"gene ID"))
+
+```
+
+Are there more unique stickleback gene hits for one assembly vs. the other?
+
+*There is a slightly more unique stickleback gene hits in the tri_40xnrom than tri_rare. 13462 to 13364 at a difference of 98. The reason being that normalization leads to less transcripts breaking for the assembly, leading to a little more unique stickleback gene hits*
+
+
+7. Optional: Try to run BUSCO on both tri_rare.fasta and tri_40Xnorm.fasta transcriptome assemblies and include the reports (see lecture). 
+
+```{r engine = 'bash', eval = FALSE}
+#!/bin/bash
+
+#SBATCH --account=bgmp
+#SBATCH --partition=bgmp
+#SBATCH --job-name=busco40x
+#SBATCH --output=slurm-%j-%x.out
+
+#SBATCH --time=0-24:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=10
+
+
+
+ml purge ; ml easybuild intel/2017a BUSCO
+
+#export AUGUSTUS_CONFIG_PATH="/home/gperez8/bgmp/projects/bgmp/gperez8/Bi623/Ex6/AUGUSTUS/config/3.2.3/config"
+export BUSCO_CONFIG_FILE="/home/gperez8/bgmp/projects/bgmp/gperez8/Bi623/Ex6/AUGUSTUS/config/3.2.3/config/config.blast_2.2.31.ini"
+
+/usr/bin/time -v run_BUSCO.py -c 10 -i tri_40Xnorm.fasta -o busco_tri_40x -l /projects/bgmp/shared/BUSCO_Lineage/actinopterygii_odb9 -m tran
+
+
+#!/bin/bash
+
+#SBATCH --account=bgmp
+#SBATCH --partition=bgmp
+#SBATCH --job-name=buscorare
+#SBATCH --output=slurm-%j-%x.out
+
+#SBATCH --time=0-24:00:00
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=10
+
+
+
+ml purge ; ml easybuild intel/2017a BUSCO
+
+#export AUGUSTUS_CONFIG_PATH="/home/gperez8/bgmp/projects/bgmp/gperez8/Bi623/Ex6/AUGUSTUS/config/3.2.3/config"
+export BUSCO_CONFIG_FILE="/home/gperez8/bgmp/projects/bgmp/gperez8/Bi623/Ex6/AUGUSTUS/config/3.2.3/config/config.blast_2.2.31.ini"
+
+/usr/bin/time -v run_BUSCO.py -c 10 -i tri_rare.fasta -o busco_tri_rare -l /projects/bgmp/shared/BUSCO_Lineage/actinopterygii_odb9 -m tran
+
+```
+
+
+
+
+
+
+Does the BUSCO analysis imply one assembly is more complete than the other?
+
+```{r engine = 'bash', eval = FALSE}
+
+# Busco output: tri_40Xnorm.fasta
+cat short_summary_busco_tri_40x.txt
+# BUSCO version is: 3.0.2 
+# The lineage dataset is: actinopterygii_odb9 (Creation date: 2016-02-13, number of species: 20, number of BUSCOs: 4584)
+# To reproduce this run: python /projects/ebb/software/MPI/intel/2017.1.132-GCC-6.3.0-2.27/impi/2017.1.132/BUSCO/3.0.2-Python-2.7.13/bin/run_BUSCO.py -i tri_40Xnorm.fasta -o busco_tri_40x -l /projects/bgmp/shared/BUSCO_Lineage/actinopterygii_odb9/ -m transcriptome -c 10
+#
+# Summarized benchmarking in BUSCO notation for file tri_40Xnorm.fasta
+# BUSCO was run in mode: transcriptome
+
+	C:78.5%[S:38.5%,D:40.0%],F:5.7%,M:15.8%,n:4584
+
+	3597	Complete BUSCOs (C)
+	1765	Complete and single-copy BUSCOs (S)
+	1832	Complete and duplicated BUSCOs (D)
+	260	Fragmented BUSCOs (F)
+	727	Missing BUSCOs (M)
+	4584	Total BUSCO groups searched
+
+  
+# Busco output: tri_rare.fasta
+cat short_summary_busco_tri_rare.txt
+# BUSCO version is: 3.0.2 
+# The lineage dataset is: actinopterygii_odb9 (Creation date: 2016-02-13, number of species: 20, number of BUSCOs: 4584)
+# To reproduce this run: python /projects/ebb/software/MPI/intel/2017.1.132-GCC-6.3.0-2.27/impi/2017.1.132/BUSCO/3.0.2-Python-2.7.13/bin/run_BUSCO.py -i tri_rare.fasta -o busco_tri_rare -l /projects/bgmp/shared/BUSCO_Lineage/actinopterygii_odb9/ -m transcriptome -c 10
+#
+# Summarized benchmarking in BUSCO notation for file tri_rare.fasta
+# BUSCO was run in mode: transcriptome
+
+	C:79.1%[S:42.1%,D:37.0%],F:5.2%,M:15.7%,n:4584
+
+	3626	Complete BUSCOs (C)
+	1930	Complete and single-copy BUSCOs (S)
+	1696	Complete and duplicated BUSCOs (D)
+	238	Fragmented BUSCOs (F)
+	720	Missing BUSCOs (M)
+	4584	Total BUSCO groups searched
+```
+
+
+*Busco analysis implies that tri_rare.fasta is slightly more complete than tri_40Xnorm.*
+
+Does this evidence align with the above assessments?
+
+*Busco analysis does not align exactly. From the above assesment the mean, median and max were higher in the tri_40Xnorm than the tri_rare. But both do show that tri_40Xnorm and tri_rare are pretty close in range.*
+
